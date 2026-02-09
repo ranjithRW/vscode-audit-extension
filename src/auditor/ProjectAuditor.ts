@@ -60,10 +60,11 @@ export class ProjectAuditor {
 
     private getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
         const files = fs.readdirSync(dirPath);
+        const excludedFolders = ['node_modules', '.git', 'dist', 'build', '.next','.github'];
 
         files.forEach((file) => {
             if (fs.statSync(dirPath + "/" + file).isDirectory()) {
-                if (file !== 'node_modules' && file !== '.git' && file !== 'dist' && file !== 'build') {
+                if (!excludedFolders.includes(file)) {
                     arrayOfFiles = this.getAllFiles(dirPath + "/" + file, arrayOfFiles);
                 }
             } else {
