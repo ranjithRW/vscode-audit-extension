@@ -1,0 +1,33 @@
+{
+    "name": "react-flow-auditor",
+    "displayName": "React Flow Auditor & Security Scanner",
+    "description": "Automatically audit React projects for bugs, security risks, and flow issues.",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.80.0"
+    },
+    "categories": [
+        "Linters",
+        "Other"
+    ],
+    "activationEvents": [],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "audit.analyze",
+                "title": "Audit React Project"
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.80.0",
+        "@types/node": "16.x",
+        "typescript": "^5.1.0"
+    }
+}
