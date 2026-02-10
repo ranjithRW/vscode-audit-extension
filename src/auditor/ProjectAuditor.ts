@@ -3,6 +3,8 @@ import * as path from 'path';
 import { FlowAnalyzer } from '../analyzers/FlowAnalyzer';
 import { BugDetector } from '../analyzers/BugDetector';
 import { SecurityScanner } from '../analyzers/SecurityScanner';
+import { PerformanceAnalyzer } from '../analyzers/PerformanceAnalyzer';
+import { ResponsiveDetector } from '../analyzers/ResponsiveDetector';
 
 export interface AuditReport {
     project_summary: {
@@ -30,16 +32,20 @@ export class ProjectAuditor {
         const flowAnalyzer = new FlowAnalyzer(this.projectPath, files);
         const bugDetector = new BugDetector(this.projectPath, files);
         const securityScanner = new SecurityScanner(this.projectPath, files);
+        const performanceAnalyzer = new PerformanceAnalyzer(this.projectPath, files);
+        const responsiveDetector = new ResponsiveDetector(this.projectPath, files);
 
         const bugs = await bugDetector.analyze();
         const securityIssues = await securityScanner.analyze();
         const flowResult = await flowAnalyzer.analyze();
+        const performanceIssues = await performanceAnalyzer.analyze();
+        const responsiveIssues = await responsiveDetector.analyze();
 
         // Calculate risk level based on severity
         const overallRisk = this.calculateRisk(bugs, securityIssues);
 
-        // Merge flow issues into bugs for now, or keep them separate if schema allowed (schema is strict, better put in bugs)
-        const allBugs = [...bugs, ...flowResult.issues];
+        // Merge flow, responsive, and performance issues into bugs
+        const allBugs = [...bugs, ...flowResult.issues, ...responsiveIssues];
 
         return {
             project_summary: {
@@ -48,7 +54,7 @@ export class ProjectAuditor {
                 overall_risk_level: overallRisk
             },
             bugs: allBugs,
-            performance_issues: [], // Todo: Implement PerformanceAnalyzer
+            performance_issues: performanceIssues,
             security_issues: securityIssues,
             missing_tests: [], // Todo: Implement TestCoverageAnalyzer
             qa_recommendations: [
@@ -60,17 +66,24 @@ export class ProjectAuditor {
 
     private getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
         const files = fs.readdirSync(dirPath);
-        const excludedFolders = ['node_modules', '.git', 'dist', 'build', '.next','.github'];
+        const excludedFolders = ['node_modules', '.git', 'dist', 'build', '.next', '.github', 'cache', '.cache', 'out', '__pycache__', 'venv', '.venv', 'env'];
+        const allowedExtensions = ['.ts', '.tsx', '.js', '.jsx', '.py', '.css', '.scss', '.less', '.html', '.module.css'];
 
         files.forEach((file) => {
-            if (fs.statSync(dirPath + "/" + file).isDirectory()) {
-                if (!excludedFolders.includes(file)) {
-                    arrayOfFiles = this.getAllFiles(dirPath + "/" + file, arrayOfFiles);
+            const fullPath = path.join(dirPath, file);
+            try {
+                if (fs.statSync(fullPath).isDirectory()) {
+                    if (!excludedFolders.includes(file)) {
+                        arrayOfFiles = this.getAllFiles(fullPath, arrayOfFiles);
+                    }
+                } else {
+                    const lower = file.toLowerCase();
+                    if (allowedExtensions.some(ext => lower.endsWith(ext))) {
+                        arrayOfFiles.push(fullPath);
+                    }
                 }
-            } else {
-                if (file.endsWith('.ts') || file.endsWith('.tsx') || file.endsWith('.js') || file.endsWith('.jsx')) {
-                    arrayOfFiles.push(path.join(dirPath, "/", file));
-                }
+            } catch (e) {
+                // Skip files that can't be read
             }
         });
 
